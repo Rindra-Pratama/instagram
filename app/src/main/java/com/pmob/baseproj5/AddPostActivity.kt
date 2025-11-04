@@ -12,28 +12,21 @@ class AddPostActivity : AppCompatActivity() {
     private lateinit var appExecutors: AppExecutor
     private lateinit var postDao: PostDao
     private var imageUriString: String? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAddPostBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         appExecutors = AppExecutor()
         postDao = AppDatabase.getDatabase(applicationContext).postDao()
-
         imageUriString = intent.getStringExtra("image_uri")
-
         imageUriString?.let {
             binding.ivSelectedImage.setImageURI(Uri.parse(it))
-            // Sembunyikan tombol 'Tambah Gambar' karena sudah dipilih dari main
             binding.btnTambagambar.visibility = android.view.View.GONE
         }
-
         binding.btnSimpan.setOnClickListener {
             savePost()
         }
     }
-
     private fun savePost() {
         val username = binding.etUsername.text.toString().trim()
         val caption = binding.etCaption.text.toString().trim()
@@ -42,7 +35,6 @@ class AddPostActivity : AppCompatActivity() {
             Toast.makeText(this, "Isi semua kolom dulu!", Toast.LENGTH_LONG).show()
             return
         }
-
         appExecutors.diskIO.execute {
             val newPost = Post(
                 username = username,
@@ -51,7 +43,7 @@ class AddPostActivity : AppCompatActivity() {
             )
             postDao.insert(newPost)
             appExecutors.mainThread.execute {
-                Toast.makeText(this@AddPostActivity, "✅ Postingan berhasil dibuat!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@AddPostActivity, "Postingan berhasil dibuat!", Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
