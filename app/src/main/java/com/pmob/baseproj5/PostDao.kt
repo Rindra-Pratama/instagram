@@ -9,19 +9,19 @@ import androidx.room.Query
 import androidx.room.Update
 
 @Dao
-interface BarangDao {
+interface PostDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    fun insert(barang: Barang)
+    fun insert(post: Post)
 
     @Update
-    fun update(barang: Barang)
+    fun update(post: Post)
 
     @Delete
-    fun delete(barang: Barang)
+    fun delete(post: Post)
 
-    @Query("SELECT * from barang ORDER BY id ASC")
-    fun getAllBarang(): LiveData<List<Barang>>
+    @Query("SELECT * from post ORDER BY id DESC")
+    fun getAllPost(): LiveData<List<Post>>
 
-    @Query("SELECT * FROM barang WHERE id = :barangId")
-    fun getBarangById(barangId: Int): Barang
+    @Query("SELECT * FROM post WHERE id = :postId")
+    fun getPostById(postId: Int): Post
 }

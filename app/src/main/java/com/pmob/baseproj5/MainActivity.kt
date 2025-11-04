@@ -1,57 +1,104 @@
 package com.pmob.baseproj5
 
-import android.R
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
-import android.widget.ArrayAdapter
-import androidx.activity.enableEdgeToEdge
+// IMPORTS PENTING UNTUK MENGHILANGKAN ERROR MERAH:
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.pmob.baseproj5.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private lateinit var dbBarang: DatabaseBarang
-    private lateinit var barangDao:BarangDao
+    private lateinit var db: AppDatabase
+    private lateinit var postDao: PostDao
     private lateinit var appExecutors: AppExecutor
+
+    // Data Story Palsu
+    private val storyUsernames = listOf("intan_dwi", "minda_04", "rubi_community", "rizka", "amelia")
+
+    // Launcher untuk memilih gambar
+    private val galleryLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            showAddPostScreen(it.toString())
+        } ?: Toast.makeText(this, "Pemilihan gambar dibatalkan.", Toast.LENGTH_SHORT).show()
+    }
+
+    // Launcher untuk menangani hasil permintaan izin
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            galleryLauncher.launch("image/*")
+        } else {
+            Toast.makeText(this, "Izin akses galeri ditolak. Tidak bisa menambah postingan.", Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        appExecutors = AppExecutor()
-        dbBarang = DatabaseBarang.getDatabase(applicationContext)
-        barangDao = dbBarang.barangDao()
-        binding.apply {
-            fabAdd.setOnClickListener {
-                appExecutors.diskIO.execute {
-                    val barangTitles = listOf("Meja", "Semen", "Triplek", "Pasir")
-                    val jenisBarang = listOf("Perabotan", "Material", "Material", "Material")
-                    val hargaBarang = listOf(50000,48000,15000,68000)
-                    for(i in 1..4){
-                        val newBarang = Barang(i, barangTitles[i-1], jenisBarang[i-1], hargaBarang[i-1])
-                        barangDao.insert(newBarang)
-                    }
 
-                }
-            }
-            val barangList: LiveData<List<Barang>> = barangDao.getAllBarang()
-            barangList.observe(this@MainActivity, Observer { list ->
-                val namaBarangList = list.map { it.nama }
-                lvRoomDb.adapter = ArrayAdapter(
-                    this@MainActivity,
-                    R.layout.simple_list_item_1, namaBarangList
-                )
-                lvRoomDb.setOnItemClickListener { _, _, position, _ ->
-                    val selectedBarang = list[position]
-// Dapatkan ID atau data lain yang perlu dikirim ke halaman detail
-                    val detailIntent = Intent(this@MainActivity, DetailActivity::class.java)
-                    detailIntent.putExtra("barang_id", selectedBarang.id) // Contoh: Kirim ID
-                    startActivity(detailIntent)
-                }
-            })
+        appExecutors = AppExecutor()
+        db = AppDatabase.getDatabase(applicationContext)
+        postDao = db.postDao()
+
+        setupStoryRecyclerView()
+        setupFeedRecyclerView()
+
+        binding.fabAdd.setOnClickListener {
+            checkPermissionAndOpenGallery()
         }
+    }
+
+    private fun setupStoryRecyclerView() {
+        val storyAdapter = StoryAdapter(storyUsernames)
+        binding.rvStory.apply {
+            layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
+            adapter = storyAdapter
+            setHasFixedSize(true)
+        }
+    }
+
+    private fun setupFeedRecyclerView() {
+        val postListLiveData = postDao.getAllPost()
+        postListLiveData.observe(this, Observer { list ->
+            binding.rvRoomDb.apply {
+                layoutManager = LinearLayoutManager(this@MainActivity)
+                adapter = PostAdapter(list)
+            }
+        })
+    }
+
+    // FUNGSI UNTUK CEK IZIN (Mengatasi "Izin akses galeri ditolak")
+    private fun checkPermissionAndOpenGallery() {
+        val permission = if (android.os.Build.VERSION.SDK_INT >= 33) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+
+        if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
+            galleryLauncher.launch("image/*")
+        } else {
+            requestPermissionLauncher.launch(permission)
+        }
+    }
+
+    private fun showAddPostScreen(imageUri: String) {
+        val intent = Intent(this, AddPostActivity::class.java)
+        intent.putExtra("image_uri", imageUri)
+        startActivity(intent)
     }
 }

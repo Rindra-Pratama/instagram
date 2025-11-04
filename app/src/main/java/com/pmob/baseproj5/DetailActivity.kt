@@ -1,48 +1,107 @@
 package com.pmob.baseproj5
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.pmob.baseproj5.databinding.ActivityDetailBinding
 
 class DetailActivity : AppCompatActivity() {
     private lateinit var binding: ActivityDetailBinding
     private lateinit var appExecutors: AppExecutor
+    private var currentPostId: Int = -1
+    private var currentImageUri: String? = null
+
+    // Launcher untuk memilih gambar baru saat mengedit
+    private val galleryLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let {
+            // Memberikan izin akses permanen ke URI
+            contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            currentImageUri = it.toString()
+            binding.ivSelectedImage.setImageURI(it)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
         appExecutors = AppExecutor()
-        val barangId = intent.getIntExtra("barang_id", -1)
-        if (barangId != -1) {
-            appExecutors.diskIO.execute {
-                val dao = DatabaseBarang.getDatabase(this@DetailActivity).barangDao()
-                val selectedBarang = dao.getBarangById(barangId)
+        currentPostId = intent.getIntExtra("post_id", -1)
+
+        if (currentPostId != -1) {
+            loadPostData(currentPostId)
+        } else {
+            Toast.makeText(this, "Postingan tidak ditemukan.", Toast.LENGTH_SHORT).show()
+            finish()
+        }
+
+        binding.btnTambagambar.setOnClickListener {
+            galleryLauncher.launch("image/*") // Membuka galeri untuk memilih gambar baru
+        }
+
+        binding.btnUpdate.setOnClickListener {
+            updatePost()
+        }
+
+        binding.btnDelete.setOnClickListener {
+            deletePost()
+        }
+    }
+
+    private fun loadPostData(postId: Int) {
+        appExecutors.diskIO.execute {
+            val dao = AppDatabase.getDatabase(this@DetailActivity).postDao()
+            val selectedPost = dao.getPostById(postId)
+
+            appExecutors.mainThread.execute {
                 binding.apply {
-                    etNama.setText(selectedBarang.nama)
-                    etJenis.setText(selectedBarang.jenis)
-                    etharga.setText(selectedBarang.harga.toString())
-                    btnUpdate.setOnClickListener {
-                        val updatedBarang = selectedBarang.copy(
-                            nama = etNama.text.toString(),
-                            jenis = etJenis.text.toString(),
-                            harga = etharga.text.toString().toInt()
-                        )
-                        appExecutors.diskIO.execute {
-                            dao.update(updatedBarang)
-// Lakukan tindakan update lainnya jika diperlukan
-                        }
-                    }
-                    btnDelete.setOnClickListener {
-                        appExecutors.diskIO.execute {
-                            dao.delete(selectedBarang)
-// Lakukan tindakan delete lainnya jika diperlukan
-                            finish() // Kembali ke MainActivity setelah menghapus
-                        }
-                    }
+                    etUsername.setText(selectedPost.username)
+                    etCaption.setText(selectedPost.caption)
+
+                    currentImageUri = selectedPost.imageUri
+                    ivSelectedImage.setImageURI(Uri.parse(currentImageUri))
                 }
+            }
+        }
+    }
+
+    private fun updatePost() {
+        val newUsername = binding.etUsername.text.toString()
+        val newCaption = binding.etCaption.text.toString()
+
+        if (newUsername.isBlank() || newCaption.isBlank() || currentImageUri.isNullOrBlank()) {
+            Toast.makeText(this, "Semua kolom harus diisi dan gambar dipilih", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        appExecutors.diskIO.execute {
+            val dao = AppDatabase.getDatabase(this@DetailActivity).postDao()
+            val updatedPost = Post(
+                id = currentPostId, // PENTING: ID harus sama
+                username = newUsername,
+                caption = newCaption,
+                imageUri = currentImageUri!!
+            )
+            dao.update(updatedPost)
+            appExecutors.mainThread.execute {
+                Toast.makeText(this@DetailActivity, "✅ Postingan berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        }
+    }
+
+    private fun deletePost() {
+        appExecutors.diskIO.execute {
+            val dao = AppDatabase.getDatabase(this@DetailActivity).postDao()
+            val postToDelete = dao.getPostById(currentPostId)
+            dao.delete(postToDelete)
+            appExecutors.mainThread.execute {
+                Toast.makeText(this@DetailActivity, "🗑️ Postingan berhasil dihapus", Toast.LENGTH_SHORT).show()
+                finish()
             }
         }
     }

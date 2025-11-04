@@ -6,12 +6,12 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp"
-    tools:context=".DetailActivity">
+    tools:context=".AddPostActivity">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Edit Post"
+        android:text="Buat Post Baru"
         android:textSize="20sp"
         android:textStyle="bold"
         android:layout_marginBottom="16dp"/>
@@ -36,10 +36,10 @@
         android:id="@+id/btnTambagambar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Ubah Gambar"
+        android:text="Tambah Gambar (Sudah dipilih)"
         android:drawablePadding="8dp"
-        android:drawableStart="@drawable/ic_image_24"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="16dp"
+        android:visibility="gone"/>
 
     <ImageView
         android:id="@+id/ivSelectedImage"
@@ -51,17 +51,9 @@
         android:layout_marginBottom="32dp"/>
 
     <Button
-        android:id="@+id/btnUpdate"
+        android:id="@+id/btnSimpan"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Update Post"
-        android:layout_marginBottom="8dp"/>
-
-    <Button
-        android:id="@+id/btnDelete"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Hapus Post"
-        android:backgroundTint="@android:color/holo_red_light"/>
+        android:text="Simpan" />
 
 </LinearLayout>
