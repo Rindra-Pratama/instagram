@@ -14,10 +14,9 @@ class DetailActivity : AppCompatActivity() {
     private var currentPostId: Int = -1
     private var currentImageUri: String? = null
 
-    // Launcher untuk memilih gambar baru saat mengedit
+  
     private val galleryLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            // Memberikan izin akses permanen ke URI
             contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             currentImageUri = it.toString()
             binding.ivSelectedImage.setImageURI(it)
@@ -28,10 +27,8 @@ class DetailActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         appExecutors = AppExecutor()
         currentPostId = intent.getIntExtra("post_id", -1)
-
         if (currentPostId != -1) {
             loadPostData(currentPostId)
         } else {
@@ -40,9 +37,8 @@ class DetailActivity : AppCompatActivity() {
         }
 
         binding.btnTambagambar.setOnClickListener {
-            galleryLauncher.launch("image/*") // Membuka galeri untuk memilih gambar baru
+            galleryLauncher.launch("image/*") 
         }
-
         binding.btnUpdate.setOnClickListener {
             updatePost()
         }
@@ -81,26 +77,25 @@ class DetailActivity : AppCompatActivity() {
         appExecutors.diskIO.execute {
             val dao = AppDatabase.getDatabase(this@DetailActivity).postDao()
             val updatedPost = Post(
-                id = currentPostId, // PENTING: ID harus sama
+                id = currentPostId, 
                 username = newUsername,
                 caption = newCaption,
                 imageUri = currentImageUri!!
             )
             dao.update(updatedPost)
             appExecutors.mainThread.execute {
-                Toast.makeText(this@DetailActivity, "✅ Postingan berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@DetailActivity, "Postingan berhasil diperbarui", Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
     }
-
     private fun deletePost() {
         appExecutors.diskIO.execute {
             val dao = AppDatabase.getDatabase(this@DetailActivity).postDao()
             val postToDelete = dao.getPostById(currentPostId)
             dao.delete(postToDelete)
             appExecutors.mainThread.execute {
-                Toast.makeText(this@DetailActivity, "🗑️ Postingan berhasil dihapus", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@DetailActivity, "Postingan berhasil dihapus", Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
